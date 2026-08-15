@@ -10,6 +10,7 @@ import { useNotificationSettings } from "@/lib/hooks/use-notification-settings";
 import { useProfile } from "@/lib/profile-context";
 import { cn } from "@/lib/utils";
 import { FinancialAccountManager } from "@/components/financial-account-manager";
+import { SpendingCategoryManager } from "@/components/spending-category-manager";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -160,6 +161,16 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent>
           <FinancialAccountManager profileId={activeProfileId} compact />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Spending categories</CardTitle>
+          <CardDescription>Used to categorize imported transactions — separate from your Bills categories.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <SpendingCategoryManager profileId={activeProfileId} />
         </CardContent>
       </Card>
 
