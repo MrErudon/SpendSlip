@@ -22,6 +22,7 @@ export function useDashboard(profileId: string | null) {
   const supabase = React.useMemo(() => createClient(), []);
   const [overdue, setOverdue] = React.useState<OverdueBill[]>([]);
   const [activity, setActivity] = React.useState<ActivityItem[]>([]);
+  const [reviewCount, setReviewCount] = React.useState(0);
   const [loading, setLoading] = React.useState(true);
 
   const refresh = React.useCallback(async () => {
@@ -29,7 +30,7 @@ export function useDashboard(profileId: string | null) {
     setLoading(true);
 
     const today = new Date().toISOString().slice(0, 10);
-    const [{ data: overdueRows }, { data: activityRows }] = await Promise.all([
+    const [{ data: overdueRows }, { data: activityRows }, { count }] = await Promise.all([
       supabase
         .from("bill_occurrences")
         .select("id, due_date, amount, bills(name)")
@@ -44,7 +45,13 @@ export function useDashboard(profileId: string | null) {
         .eq("paid", true)
         .order("paid_at", { ascending: false })
         .limit(8),
+      supabase
+        .from("transactions")
+        .select("id", { count: "exact", head: true })
+        .eq("budget_profile_id", profileId)
+        .eq("needs_review", true),
     ]);
+    setReviewCount(count ?? 0);
 
     setOverdue(
       ((overdueRows ?? []) as unknown as (BillOccurrence & { bills: { name: string } | null })[]).map((o) => ({
@@ -73,5 +80,5 @@ export function useDashboard(profileId: string | null) {
     refresh();
   }, [refresh]);
 
-  return { overdue, activity, loading, refresh };
+  return { overdue, activity, reviewCount, loading, refresh };
 }

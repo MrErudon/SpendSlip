@@ -4,8 +4,14 @@ import { parseStatementFile } from "@/lib/statements/parser";
 import { normalizeMerchant } from "@/lib/statements/normalize";
 import { computeFingerprint } from "@/lib/statements/transaction-fingerprint";
 import { categorizeTransaction } from "@/lib/statements/categorize";
+import { classifyMerchant, isAiClassifierEnabled } from "@/lib/ai/financial-classifier";
 import type { ParsePreviewResponse, PreviewRow } from "@/lib/statements/types";
 import type { MerchantRule } from "@/lib/types-financial";
+
+// Bounds how many rows per import can hit the AI fallback — keeps latency
+// and cost predictable on a large statement; the rest simply stay
+// "Needs Review" for manual categorization, same as when AI is off.
+const AI_FALLBACK_LIMIT = 25;
 
 export const runtime = "nodejs";
 
@@ -112,6 +118,27 @@ export async function POST(request: Request) {
       excluded: isDuplicate,
     };
   });
+
+  if (isAiClassifierEnabled()) {
+    const { data: categoryRows } = await supabase
+      .from("spending_categories")
+      .select("name")
+      .eq("budget_profile_id", budgetProfileId)
+      .eq("archived", false);
+    const availableCategories = (categoryRows ?? []).map((c) => c.name as string);
+
+    let aiCallsUsed = 0;
+    for (const row of rows) {
+      if (!row.needsReview || row.isDuplicate || aiCallsUsed >= AI_FALLBACK_LIMIT) continue;
+      aiCallsUsed++;
+      const result = await classifyMerchant(row.rawDescription, availableCategories);
+      if (result) {
+        row.normalizedMerchant = result.merchant;
+        row.categoryName = result.category;
+        row.needsReview = false;
+      }
+    }
+  }
 
   return NextResponse.json({
     ok: true,

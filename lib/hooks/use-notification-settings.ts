@@ -22,7 +22,7 @@ export function useNotificationSettings(userId: string | null) {
   }, [refresh]);
 
   const update = React.useCallback(
-    async (patch: Partial<Pick<NotificationSettings, "email_reminders" | "reminder_days">>) => {
+    async (patch: Partial<Pick<NotificationSettings, "email_reminders" | "reminder_days" | "keep_statement_files">>) => {
       if (!userId) return;
       setSettings((prev) => (prev ? { ...prev, ...patch } : prev));
       if (settings?.id) {

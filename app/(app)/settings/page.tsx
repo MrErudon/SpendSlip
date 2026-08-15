@@ -7,7 +7,9 @@ import { Loader2, LogOut, Moon, Sun, Trash2 } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
 import { useNotificationSettings } from "@/lib/hooks/use-notification-settings";
+import { useProfile } from "@/lib/profile-context";
 import { cn } from "@/lib/utils";
+import { FinancialAccountManager } from "@/components/financial-account-manager";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -29,6 +31,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const supabase = React.useMemo(() => createClient(), []);
   const { theme, setTheme } = useTheme();
+  const { activeProfileId } = useProfile();
 
   const [userId, setUserId] = React.useState<string | null>(null);
   const [email, setEmail] = React.useState("");
@@ -123,6 +126,40 @@ export default function SettingsPage() {
               })}
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Statement imports</CardTitle>
+          <CardDescription>Controls what happens to the original file after a statement is parsed.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="keep-files">Keep original statement files</Label>
+              <p className="text-xs text-muted-foreground">
+                Off by default — files are deleted right after parsing. When on, they&apos;re stored privately and
+                scoped to your account only.
+              </p>
+            </div>
+            <Switch
+              id="keep-files"
+              checked={settings?.keep_statement_files ?? false}
+              disabled={loading}
+              onCheckedChange={(checked) => update({ keep_statement_files: checked })}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Financial accounts</CardTitle>
+          <CardDescription>The checking, savings, and credit-card accounts you import statements into.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <FinancialAccountManager profileId={activeProfileId} compact />
         </CardContent>
       </Card>
 
