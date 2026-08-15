@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { computeFingerprint } from "@/lib/statements/transaction-fingerprint";
+import { reconcileTransfers } from "@/lib/statements/reconcile-transfers";
 import type { ImportRequestRow, ImportResponse } from "@/lib/statements/types";
 import type { StatementSourceType } from "@/lib/types-financial";
 
@@ -159,6 +160,14 @@ export async function POST(request: Request) {
   for (const batch of chunk(rowsToPersist, INSERT_CHUNK_SIZE)) {
     const { error, count } = await supabase.from("transactions").insert(batch, { count: "exact" });
     if (!error) imported += count ?? batch.length;
+  }
+
+  // Re-run transfer/credit-card-payment matching across the whole profile
+  // now that new candidates exist — this is what catches a checking
+  // "TRANSFER TO SAVINGS" imported today against a savings statement
+  // imported last month, not just pairs within this one file.
+  if (imported > 0) {
+    await reconcileTransfers(supabase, budgetProfileId);
   }
 
   return NextResponse.json({
