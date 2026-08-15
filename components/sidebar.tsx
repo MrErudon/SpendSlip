@@ -5,9 +5,13 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
+  ArrowLeftRight,
+  FileStack,
   Receipt,
   Wallet,
   CalendarRange,
+  Repeat,
+  LineChart,
   Users,
   Settings,
   LogOut,
@@ -34,9 +38,13 @@ import { Badge } from "@/components/ui/badge";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
+  { href: "/statements", label: "Statements", icon: FileStack },
   { href: "/bills", label: "Bills", icon: Receipt },
   { href: "/income", label: "Income", icon: Wallet },
   { href: "/planner", label: "Planner", icon: CalendarRange },
+  { href: "/subscriptions", label: "Subscriptions", icon: Repeat },
+  { href: "/insights", label: "Insights", icon: LineChart },
   { href: "/shared", label: "Shared", icon: Users },
   { href: "/settings", label: "Settings", icon: Settings },
 ] as const;
@@ -65,7 +73,7 @@ export function Sidebar({ userEmail }: { userEmail: string }) {
 
       <ProfileSwitcher />
 
-      <nav className="flex flex-1 flex-col gap-0.5 px-2 py-2">
+      <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-2 scrollbar-thin">
         {NAV_ITEMS.map((item) => {
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           const Icon = item.icon;

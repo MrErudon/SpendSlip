@@ -146,6 +146,7 @@ export interface NotificationSettings {
   user_id: string;
   email_reminders: boolean;
   reminder_days: number[]; // e.g. [1, 3, 7]
+  keep_statement_files: boolean; // default off — see statement-files storage bucket
   created_at: string;
   updated_at: string;
 }
