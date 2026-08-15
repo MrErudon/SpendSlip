@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { computeFingerprint } from "@/lib/statements/transaction-fingerprint";
 import { reconcileTransfers } from "@/lib/statements/reconcile-transfers";
+import { detectAndPersistRecurring } from "@/lib/statements/detect-recurring";
 import type { ImportRequestRow, ImportResponse } from "@/lib/statements/types";
 import type { StatementSourceType } from "@/lib/types-financial";
 
@@ -168,6 +169,7 @@ export async function POST(request: Request) {
   // imported last month, not just pairs within this one file.
   if (imported > 0) {
     await reconcileTransfers(supabase, budgetProfileId);
+    await detectAndPersistRecurring(supabase, user.id, budgetProfileId);
   }
 
   return NextResponse.json({
