@@ -130,10 +130,23 @@ export function detectRecurringGroups(transactions: RecurringTransactionInput[])
   return candidates.sort((a, b) => b.confidenceScore - a.confidenceScore);
 }
 
+// Calendar-convention period counts for display math (annualCost /
+// monthlyEquivalent) — distinct from FREQUENCY_DAYS above, which is
+// tuned for interval-detection tolerance rather than exact calendar
+// arithmetic. This keeps "$22.99/mo" reading as exactly "$275.88/year"
+// (22.99 x 12) rather than a slightly-off value from a 30.4-day month.
+const PERIODS_PER_YEAR: Record<RecurringFrequency, number> = {
+  weekly: 52,
+  biweekly: 26,
+  monthly: 12,
+  quarterly: 4,
+  semiannual: 2,
+  annual: 1,
+};
+
 /** Annualized cost for display, e.g. "$22.99/mo -> $275.88/year". */
 export function annualCost(amount: number, frequency: RecurringFrequency): number {
-  const periodsPerYear = 365 / FREQUENCY_DAYS[frequency];
-  return amount * periodsPerYear;
+  return amount * PERIODS_PER_YEAR[frequency];
 }
 
 export function monthlyEquivalent(amount: number, frequency: RecurringFrequency): number {

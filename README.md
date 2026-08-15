@@ -1,16 +1,20 @@
 # SpendSlip
 
-A bills, income, and paycheck-planning app. Microsoft To-Do–inspired: a
-persistent sidebar, dark mode by default, and a blue (`#0078D4`) accent.
+A bills, income, paycheck-planning, and statement-import budgeting app.
+Microsoft To-Do–inspired: a persistent sidebar, dark mode by default, and a
+blue (`#0078D4`) accent. See `docs/statement-import-expansion-plan.md` for
+the architecture behind the transaction-ledger half of the app.
 
 ## Stack
 
 - **Next.js 15** (App Router) + **TypeScript**
 - **Supabase** — Postgres, Auth (password + magic link), Row Level Security,
-  Edge Functions
+  Edge Functions, Storage
 - **Tailwind CSS v4** for styling, **Framer Motion** for the paycheck
   planner's drag-and-drop
 - shadcn/ui-style components (Radix primitives + `class-variance-authority`)
+- **papaparse** / **pdf-parse** for statement parsing, **Vitest** for unit
+  tests on the financial logic
 - Deploys to **Vercel**
 
 ## Project layout
@@ -20,21 +24,59 @@ app/
   (auth)/login, (auth)/signup      Email+password and magic-link auth
   (app)/                           Sidebar shell + auth-gated pages
     bills/ income/ planner/ shared/ dashboard/ settings/
+    statements/                    Upload, preview, import statements
+    transactions/                  Paginated ledger, filters, bulk actions
+    subscriptions/                 Detected recurring charges
+    insights/                      Category breakdown, trends, suggested budget, forecast
   auth/callback/route.ts           Magic-link session exchange
   api/account/route.ts             Account deletion (service role)
+  api/statements/{parse,import}/   Statement parsing + import pipeline
 lib/
   supabase/{client,server,middleware}.ts
-  types.ts                         Domain types + DB schema reference
+  types.ts / types-financial.ts    Domain types + DB schema reference
   tax.ts                           2026 federal bracket + FICA estimator
   dates.ts                         Bill recurrence date math
-  hooks/                           Data hooks (bills, income, planner, …)
+  statements/                      Parsing, normalization, categorization,
+                                    fingerprinting, transfer/recurring detection,
+                                    budget generator, forecasting (all pure/tested)
+  ai/financial-classifier.ts       Optional, narrowly-scoped AI fallback
+  hooks/                           Data hooks (bills, income, planner, transactions, …)
   profile-context.tsx              Active budget profile (client context)
 components/                        Feature components + components/ui/*
 supabase/
-  migrations/                      Full schema, RLS, triggers, tax seed data
+  migrations/                      Full schema, RLS, triggers, seed data
   functions/rollover-bills/        Monthly bill occurrence generator (cron)
   functions/send-reminders/        Daily email reminders via Resend (cron)
+scripts/seed-demo-data.ts          Dev-only demo transaction seeder
 ```
+
+## Statement import, transactions & budgeting
+
+Upload a CSV or PDF bank/credit-card statement on the **Statements** page.
+SpendSlip parses it, normalizes merchant names, categorizes each
+transaction (merchant rules → history → built-in keywords → optional AI →
+Needs Review), fingerprints every row to catch duplicate imports, and
+detects transfers/credit-card payments so they don't get double-counted as
+spending. Corrections you make become merchant rules that apply to future
+imports automatically. Recurring charges surface on **Subscriptions**;
+**Insights** turns the accumulated history into category trends, a
+suggested monthly budget, and a transparent month-end forecast.
+
+Raw statement files are deleted right after parsing by default — enable
+"Keep original statement files" in Settings to retain them in a private,
+per-user Supabase Storage bucket instead.
+
+To try it with realistic data instead of uploading real statements:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... \
+  npm run seed:demo -- you@example.com
+```
+
+This is a dev-only script (not reachable from the app itself) that seeds
+~3 months of transactions covering income, subscriptions, groceries,
+dining, gas, a large one-off purchase, a refund, and a checking→credit-card
+payment pair, onto a "Demo Checking" and "Demo Credit Card" account.
 
 ## Getting started
 
@@ -66,6 +108,21 @@ npm run dev
 6. Set up [Resend](https://resend.com) and add `RESEND_API_KEY` to your
    Edge Function secrets (`supabase secrets set RESEND_API_KEY=...`) for
    `send-reminders` to actually deliver email.
+7. If you enable "Keep original statement files" in Settings, statement
+   files are stored in the `statement-files` Storage bucket created by
+   `supabase/migrations/20260101000007_statement_storage.sql`. No extra
+   setup needed — the migration creates the bucket and its access policies.
+
+### Running tests
+
+```bash
+npm run test
+```
+
+Covers the deterministic financial logic in `lib/statements/` and
+`lib/tax.ts` — fingerprinting, duplicate/transfer/credit-card-payment
+detection, merchant normalization, merchant-rule precedence, recurring
+detection, budget generation, and forecasting.
 
 ### Environment variables
 
